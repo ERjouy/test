@@ -1,60 +1,681 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Page de test</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 2rem;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marginalia — journal de bord</title>
+<meta name="description" content="Le carnet de bord d'un développeur : code, outils, ateliers et écriture.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230F1216'/%3E%3Cpath d='M6 22 C 12 16, 18 26, 26 18' fill='none' stroke='%23D6AF6B' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0F1216;
+    --ink-2: #161B22;
+    --ink-3: #1C232B;
+    --rule: #293139;
+    --paper: #E9E4DA;
+    --muted: #97A1AD;
+    --brass: #D6AF6B;
+    --sage: #8FB6A8;
+    --signal: #C9736A;
+    --display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --measure: 66ch;
+    --ease: cubic-bezier(.22, .61, .28, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--body);
+    font-size: 1.0625rem;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- fond ambiant : deux lueurs très lentes ---------- */
+  .ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+  .ambient .glow {
+    position: absolute;
+    width: 76vmax; height: 76vmax;
+    border-radius: 50%;
+    filter: blur(38px);
+  }
+  .ambient .glow.a {
+    top: -34vmax; right: -20vmax;
+    background: radial-gradient(circle at center, rgba(214,175,107,.15), rgba(214,175,107,0) 62%);
+    animation: drift-a 52s ease-in-out infinite alternate;
+  }
+  .ambient .glow.b {
+    bottom: -42vmax; left: -24vmax;
+    background: radial-gradient(circle at center, rgba(143,182,168,.13), rgba(143,182,168,0) 64%);
+    animation: drift-b 64s ease-in-out infinite alternate;
+  }
+  @keyframes drift-a {
+    from { transform: translate3d(0,0,0) scale(1); }
+    to   { transform: translate3d(-7vmax, 5vmax, 0) scale(1.12); }
+  }
+  @keyframes drift-b {
+    from { transform: translate3d(0,0,0) scale(1.06); }
+    to   { transform: translate3d(6vmax, -4vmax, 0) scale(1); }
+  }
+  .ambient .grain {
+    position: absolute; inset: 0;
+    opacity: .14;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- barre de progression de lecture ---------- */
+  .reading { position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 40; }
+  .reading span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--sage), var(--brass));
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+
+  .skip {
+    position: absolute; left: -999px; top: 0;
+  }
+  .skip:focus {
+    left: 1rem; top: 1rem; z-index: 60;
+    background: var(--ink-3); color: var(--paper);
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .5rem .8rem;
+  }
+
+  /* ---------- en-tête ---------- */
+  .masthead {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: baseline; gap: 1.5rem; flex-wrap: wrap;
+    padding: 1.1rem clamp(1.1rem, 4vw, 3rem);
+    background: rgba(15,18,22,.86);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .brand { display: flex; align-items: baseline; gap: .75rem; margin: 0; }
+  .brand .name {
+    font-family: var(--display);
+    font-size: 1.55rem;
+    letter-spacing: .01em;
+  }
+  .brand .name .mark { color: var(--brass); }
+  .brand .role { font-size: .8125rem; color: var(--muted); }
+  .masthead nav { margin-left: auto; }
+  .masthead nav ul { display: flex; gap: 1.4rem; margin: 0; padding: 0; list-style: none; }
+  .masthead nav a {
+    color: var(--muted); text-decoration: none; font-size: .9375rem;
+    padding-bottom: 3px;
+    background-image: linear-gradient(var(--brass), var(--brass));
+    background-repeat: no-repeat; background-position: 0 100%;
+    background-size: 0 1px;
+    transition: color .28s var(--ease), background-size .38s var(--ease);
+  }
+  .masthead nav a:hover, .masthead nav a:focus-visible { color: var(--paper); background-size: 100% 1px; }
+
+  a:focus-visible, button:focus-visible, input:focus-visible {
+    outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 4px;
+  }
+  /* ---------- ouverture : dernier billet ---------- */
+  .featured {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, .48fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
+    align-items: center;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: clamp(2.6rem, 7vw, 5.5rem) clamp(1.1rem, 4vw, 3rem) clamp(2.2rem, 5vw, 4rem);
+  }
+  .kicker {
+    margin: 0 0 1.1rem;
+    font-size: .875rem; color: var(--muted);
+    padding-left: .85rem;
+    border-left: 2px solid var(--brass);
+  }
+  .headline {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(2.5rem, 6.4vw, 4.9rem);
+    line-height: 1.03;
+    letter-spacing: -.015em;
+    margin: 0 0 1.4rem;
+    max-width: 20ch;
+  }
+  .headline .line { display: block; overflow: hidden; }
+  .headline .line > span { display: block; }
+  .lede {
+    max-width: var(--measure);
+    color: #C7CDD5;
+    margin: 0 0 1.7rem;
+  }
+  .meta {
+    display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+    font-size: .875rem; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .meta .cta {
+    margin-left: auto;
+    color: var(--paper); text-decoration: none;
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    padding: .6rem 1.05rem;
+    background: var(--ink-2);
+    transition: border-color .3s var(--ease), background .3s var(--ease), transform .3s var(--ease);
+  }
+  .meta .cta:hover, .meta .cta:focus-visible {
+    background: var(--ink-3); border-color: var(--brass); transform: translateY(-2px);
+  }
+  .featured figure { margin: 0; }
+  .contour { width: 100%; height: auto; display: block; }
+  .contour path {
+    fill: none; stroke-width: 1.4; stroke-linecap: round;
+    stroke-dasharray: 1; stroke-dashoffset: 1;
+    animation: trace 6.5s var(--ease) forwards, breathe 18s ease-in-out infinite alternate;
+  }
+  .contour path:nth-child(1) { stroke: rgba(214,175,107,.62); animation-delay: .35s, .35s; }
+  .contour path:nth-child(2) { stroke: rgba(143,182,168,.5); animation-delay: .75s, .75s; }
+  .contour path:nth-child(3) { stroke: rgba(233,228,218,.26); animation-delay: 1.15s, 1.15s; }
+  .contour path:nth-child(4) { stroke: rgba(214,175,107,.34); animation-delay: 1.55s, 1.55s; }
+  .contour path:nth-child(5) { stroke: rgba(143,182,168,.28); animation-delay: 1.95s, 1.95s; }
+  .contour .dot { fill: var(--brass); opacity: 0; animation: dotin 1.2s var(--ease) 2.1s forwards; }
+  @keyframes trace { to { stroke-dashoffset: 0; } }
+  @keyframes breathe { to { transform: translateY(-10px); } }
+  @keyframes dotin { to { opacity: .9; } }
+  @keyframes line-in { from { transform: translateY(112%); } to { transform: translateY(0); } }
+  .headline .line > span { animation: line-in 1s var(--ease) both; }
+  .headline .line:nth-child(2) > span { animation-delay: .13s; }
+  .headline .line:nth-child(3) > span { animation-delay: .26s; }
+  .kicker, .lede, .meta, .featured figure { animation: rise-in .85s var(--ease) both; }
+  .kicker { animation-delay: .05s; }
+  .lede { animation-delay: .45s; }
+  .meta { animation-delay: .58s; }
+  .featured figure { animation-delay: .3s; }
+  @keyframes rise-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- billet + notes ---------- */
+  .columns {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 clamp(1.1rem, 4vw, 3rem) clamp(3rem, 6vw, 5rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 290px;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: start;
+  }
+  .posts-head {
+    display: grid; gap: 1.2rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .posts-head h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 1.75rem; letter-spacing: -.01em; margin: 0;
+  }
+  .tools { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .chip {
+    position: relative;
+    font: inherit; font-size: .875rem;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: .38rem .85rem;
+    cursor: pointer;
+    transition: color .26s var(--ease), border-color .26s var(--ease), background .26s var(--ease);
+  }
+  .chip:hover { color: var(--paper); border-color: #3A4551; }
+  .chip[aria-pressed="true"] { color: var(--ink); background: var(--paper); border-color: var(--paper); }
+  .search { display: flex; align-items: center; gap: .55rem; margin-left: auto; }
+  .search label { font-size: .875rem; color: var(--muted); }
+  .search input {
+    font: inherit; font-size: .9375rem;
+    color: var(--paper);
+    background: var(--ink-2);
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    padding: .48rem .75rem;
+    min-width: 190px;
+    transition: border-color .26s var(--ease), background .26s var(--ease);
+  }
+  .search input::placeholder { color: #6F7A87; }
+  .search input:focus { border-color: var(--brass); background: var(--ink-3); }
+  .tally { font-size: .8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  ul.post-list { list-style: none; margin: 0; padding: 0; }
+  .post {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .35rem 1.5rem;
+    padding: 1.35rem 1.1rem 1.35rem 1.35rem;
+    border-bottom: 1px solid var(--rule);
+    transition: background .34s var(--ease), transform .34s var(--ease), opacity .26s var(--ease);
+  }
+  .post::before {
+    content: ""; position: absolute; left: 0; top: 1.35rem; bottom: 1.35rem;
+    width: 2px; background: var(--brass);
+    transform: scaleY(0); transform-origin: top;
+    transition: transform .4s var(--ease);
+  }
+  .post:hover { background: var(--ink-2); transform: translateX(4px); }
+  .post:hover::before { transform: scaleY(1); }
+  .post.is-out { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+  .post h3 {
+    grid-column: 1; margin: 0;
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(1.35rem, 2.5vw, 1.95rem);
+    line-height: 1.18; letter-spacing: -.01em;
+  }
+  .post h3 a {
+    color: inherit; text-decoration: none;
+    background-image: linear-gradient(var(--brass), var(--brass));
+    background-repeat: no-repeat; background-position: 0 100%;
+    background-size: 0 1px;
+    transition: background-size .42s var(--ease);
+  }
+  .post:hover h3 a, .post h3 a:focus-visible { background-size: 100% 1px; }
+  .post .when {
+    grid-column: 2; grid-row: 1;
+    font-size: .8125rem; color: var(--muted);
+    font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: .4rem;
+  }
+  .post p { grid-column: 1 / -1; max-width: var(--measure); color: var(--muted); margin: .35rem 0 .55rem; }
+  .post .tags { grid-column: 1 / -1; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .tag {
+    font-size: .75rem; letter-spacing: .02em;
+    color: var(--sage);
+    border: 1px solid rgba(143,182,168,.3);
+    border-radius: 4px; padding: .12rem .5rem;
+  }
+  .empty { color: var(--muted); padding: 1.6rem .2rem; }
+  .empty b { color: var(--paper); font-weight: 500; }
+
+  aside { display: grid; gap: 2.2rem; }
+  aside section { border: 1px solid var(--rule); border-radius: 10px; background: var(--ink-2); padding: 1.35rem 1.4rem; }
+  aside h2 {
+    margin: 0 0 1rem;
+    font-family: var(--display); font-weight: 400; font-size: 1.2rem; letter-spacing: 0;
+  }
+  .now dl { margin: 0; display: grid; gap: .95rem; }
+  .now dt { font-size: .8125rem; color: var(--muted); }
+  .now dd { margin: .15rem 0 0; font-size: .9688rem; }
+  .notes ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .notes li { font-size: .9375rem; color: #C3C9D1; padding-left: .8rem; border-left: 1px solid var(--rule); }
+  .notes time { display: block; font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* ---------- pied de page ---------- */
+  footer.foot {
+    border-top: 1px solid var(--rule);
+    background: linear-gradient(180deg, rgba(28,35,43,.55), rgba(15,18,22,0) 70%);
+  }
+  .foot-inner {
+    max-width: 1180px; margin: 0 auto;
+    padding: clamp(2.2rem, 5vw, 3.6rem) clamp(1.1rem, 4vw, 3rem);
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px);
+    gap: clamp(1.8rem, 4vw, 3.5rem); align-items: start;
+  }
+  .foot .about { max-width: var(--measure); color: var(--muted); margin: 0 0 1.2rem; }
+  .foot .about strong { color: var(--paper); font-weight: 500; }
+  .foot .links { display: flex; gap: 1.35rem; flex-wrap: wrap; margin: 0; padding: 0; list-style: none; }
+  .foot .links a {
+    color: var(--paper); text-decoration: none; font-size: .9375rem;
+    padding-bottom: 3px;
+    background-image: linear-gradient(var(--sage), var(--sage));
+    background-repeat: no-repeat; background-position: 0 100%; background-size: 0 1px;
+    transition: background-size .38s var(--ease);
+  }
+  .foot .links a:hover, .foot .links a:focus-visible { background-size: 100% 1px; }
+
+  .signup { border: 1px solid var(--rule); border-radius: 10px; background: var(--ink-2); padding: 1.4rem; }
+  .signup h2 { font-family: var(--display); font-weight: 400; font-size: 1.3rem; margin: 0 0 .5rem; }
+  .signup .help { font-size: .875rem; color: var(--muted); margin: 0 0 1.1rem; }
+  .signup form { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .signup input {
+    font: inherit; font-size: .9375rem; flex: 1 1 190px;
+    color: var(--paper); background: var(--ink);
+    border: 1px solid var(--rule); border-radius: 7px;
+    padding: .6rem .8rem;
+    transition: border-color .26s var(--ease);
+  }
+  .signup input:focus { border-color: var(--brass); }
+  .signup button {
+    font: inherit; font-size: .9375rem; font-weight: 500;
+    color: var(--ink); background: var(--brass);
+    border: 0; border-radius: 7px; padding: .6rem 1.1rem; cursor: pointer;
+    transition: transform .26s var(--ease), background .26s var(--ease);
+  }
+  .signup button:hover { background: #E5C183; transform: translateY(-2px); }
+  .signup .say { margin: .85rem 0 0; font-size: .875rem; min-height: 1.3em; }
+  .signup .say.err { color: var(--signal); }
+  .signup .say.ok { color: var(--sage); }
+  .signup.is-shake { animation: shake .42s var(--ease); }
+  @keyframes shake {
+    20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } 100% { transform: none; }
+  }
+
+  /* ---------- révélations au défilement (uniquement si JavaScript est actif) ---------- */
+  .js .reveal { opacity: 0; transform: translateY(16px); }
+  .js .reveal.in {
+    opacity: 1; transform: none;
+    transition: opacity .7s var(--ease), transform .7s var(--ease);
+    transition-delay: var(--d, 0ms);
+  }
+
+  @media (max-width: 980px) {
+    .featured { grid-template-columns: minmax(0, 1fr); align-items: start; }
+    .featured figure { max-width: 420px; }
+    .columns { grid-template-columns: minmax(0, 1fr); }
+    .foot-inner { grid-template-columns: minmax(0, 1fr); }
+    .search { margin-left: 0; width: 100%; }
+  }
+  @media (max-width: 560px) {
+    .masthead nav { margin-left: 0; }
+    .masthead nav ul { gap: 1rem; }
+    .post { grid-template-columns: minmax(0, 1fr); }
+    .post .when { grid-column: 1; grid-row: 2; padding-top: 0; }
+    .post:hover { transform: none; }
+    .meta .cta { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition-duration: .01ms !important;
     }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 2.5rem;
-      max-width: 520px;
-      width: 100%;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, .35);
-    }
-    h1 { font-size: 1.6rem; margin-bottom: .5rem; }
-    p { color: #94a3b8; line-height: 1.6; margin-bottom: 1.5rem; }
-    button {
-      background: #3b82f6;
-      color: #fff;
-      border: 0;
-      border-radius: 8px;
-      padding: .7rem 1.2rem;
-      font-size: 1rem;
-      cursor: pointer;
-    }
-    button:hover { background: #2563eb; }
-    #compteur { margin-top: 1rem; font-size: 1.1rem; }
-  </style>
+    .reveal { opacity: 1; transform: none; }
+    .contour path { stroke-dasharray: none; }
+    .contour .dot { opacity: .9; }
+  }
+
+</style>
+<script>document.documentElement.classList.add('js');</script>
 </head>
 <body>
-  <main class="card">
-    <h1>Page de test</h1>
-    <p>Ceci est une page HTML de test. Le bouton ci-dessous incrémente un compteur pour vérifier que JavaScript fonctionne.</p>
-    <button id="btn">Cliquer</button>
-    <div id="compteur">Clics : 0</div>
-  </main>
+<div class="ambient" aria-hidden="true">
+  <div class="glow a"></div>
+  <div class="glow b"></div>
+  <div class="grain"></div>
+</div>
 
-  <script>
-    let clics = 0;
-    const btn = document.getElementById('btn');
-    const compteur = document.getElementById('compteur');
-    btn.addEventListener('click', () => {
-      clics++;
-      compteur.textContent = 'Clics : ' + clics;
+<div class="reading" aria-hidden="true"><span id="reading-bar"></span></div>
+<a class="skip" href="#billets">Aller aux billets</a>
+
+<header class="masthead">
+  <p class="brand">
+    <span class="name">Marginal<span class="mark">i</span>a</span>
+    <span class="role">journal de bord</span>
+  </p>
+  <nav aria-label="Navigation principale">
+    <ul>
+      <li><a href="#billets">Billets</a></li>
+      <li><a href="#atelier">En ce moment</a></li>
+      <li><a href="#recevoir">Recevoir les billets</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="featured">
+    <div>
+      <p class="kicker">Dernier billet</p>
+      <h1 class="headline" id="headline">
+        <span class="line"><span>Écrire du code</span></span>
+        <span class="line"><span>qui se lit</span></span>
+        <span class="line"><span>à voix haute</span></span>
+      </h1>
+      <p class="lede">
+        Un nom de fonction est une phrase. Je le teste maintenant en le lisant à haute voix
+        avant d'ouvrir la moindre revue : trois secondes, et la moitié de mes remarques
+        tombent d'elles-mêmes.
+      </p>
+      <p class="meta">
+        <span>13 novembre 2026</span>
+        <span>9 min de lecture</span>
+        <a class="cta" href="#billets">Lire le billet</a>
+      </p>
+    </div>
+    <figure aria-hidden="true">
+      <svg class="contour" viewBox="0 0 320 250" role="presentation">
+        <path pathLength="1" d="M8 196 C 62 168, 96 208, 148 178 S 236 132, 312 158" />
+        <path pathLength="1" d="M8 158 C 58 128, 104 168, 152 138 S 244 96, 312 120" />
+        <path pathLength="1" d="M8 120 C 54 92, 108 128, 156 100 S 246 60, 312 84" />
+        <path pathLength="1" d="M8 82 C 52 56, 112 90, 160 62 S 250 26, 312 48" />
+        <path pathLength="1" d="M8 44 C 50 20, 116 52, 164 26 S 252 -4, 312 12" />
+        <circle class="dot" cx="152" cy="138" r="3.2" />
+      </svg>
+    </figure>
+  </section>
+  <div class="columns">
+    <section id="billets" aria-labelledby="billets-titre">
+      <div class="posts-head">
+        <h2 id="billets-titre">Billets</h2>
+        <div class="tools">
+          <div class="chips" role="group" aria-label="Filtrer par sujet">
+            <button class="chip" type="button" data-filter="tous" aria-pressed="true">Tous</button>
+            <button class="chip" type="button" data-filter="code" aria-pressed="false">Code</button>
+            <button class="chip" type="button" data-filter="outils" aria-pressed="false">Outils</button>
+            <button class="chip" type="button" data-filter="ecriture" aria-pressed="false">Écriture</button>
+            <button class="chip" type="button" data-filter="ateliers" aria-pressed="false">Ateliers</button>
+          </div>
+          <p class="search">
+            <label for="q">Rechercher</label>
+            <input id="q" type="search" placeholder="un mot, un titre" autocomplete="off">
+          </p>
+        </div>
+        <p class="tally" id="tally" aria-live="polite">5 billets</p>
+      </div>
+
+      <ul class="post-list" id="liste">
+        <li class="post reveal" data-tags="ecriture code">
+          <h3><a href="#">La revue de code est un exercice d'écriture</a></h3>
+          <span class="when">6 novembre 2026, 7 min</span>
+          <p>Les remarques qui font avancer une revue tiennent en deux phrases, au verbe actif, et nomment un seul changement à la fois.</p>
+          <span class="tags"><span class="tag">Écriture</span><span class="tag">Code</span></span>
+        </li>
+        <li class="post reveal" data-tags="outils">
+          <h3><a href="#">Trois jours sans framework</a></h3>
+          <span class="when">29 octobre 2026, 12 min</span>
+          <p>J'ai reconstruit mon tableau de bord en HTML et CSS seuls. Ce que j'y ai gagné, et les deux erreurs que je ne referai pas.</p>
+          <span class="tags"><span class="tag">Outils</span></span>
+        </li>
+        <li class="post reveal" data-tags="ateliers">
+          <h3><a href="#">Le carnet qui remplace ma liste de tâches</a></h3>
+          <span class="when">21 octobre 2026, 5 min</span>
+          <p>Une page, une ligne par jour, une relecture le vendredi. Ma liste de tâches avait cessé de me ressembler depuis longtemps.</p>
+          <span class="tags"><span class="tag">Ateliers</span></span>
+        </li>
+        <li class="post reveal" data-tags="code">
+          <h3><a href="#">Débugger à voix basse</a></h3>
+          <span class="when">14 octobre 2026, 8 min</span>
+          <p>Décrire ce que je vois, une phrase à la fois, pendant que je pose mes points d'arrêt. Le bug finit par se nommer tout seul.</p>
+          <span class="tags"><span class="tag">Code</span></span>
+        </li>
+        <li class="post reveal" data-tags="ateliers outils">
+          <h3><a href="#">Garder ses notes vingt ans</a></h3>
+          <span class="when">7 octobre 2026, 10 min</span>
+          <p>Mes notes de 2006 s'ouvrent encore : du texte brut, des dates lisibles, aucune application dédiée à maintenir.</p>
+          <span class="tags"><span class="tag">Ateliers</span><span class="tag">Outils</span></span>
+        </li>
+      </ul>
+
+      <p class="empty" id="empty" hidden>Aucun billet ne correspond à cette recherche. <b>Effacez le mot</b> ou choisissez un autre sujet.</p>
+    </section>
+
+    <aside>
+      <section id="atelier" aria-labelledby="atelier-titre">
+        <h2 id="atelier-titre">En ce moment</h2>
+        <dl class="now">
+          <div>
+            <dt>Lecture en cours</dt>
+            <dd>Le Guide du typographe, page 118</dd>
+          </div>
+          <div>
+            <dt>Construction</dt>
+            <dd>Un moteur de cartes en 400 lignes de CSS</dd>
+          </div>
+          <div>
+            <dt>Rythme</dt>
+            <dd>Un billet le mardi soir</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="notes-titre">
+        <h2 id="notes-titre">Notes brèves</h2>
+        <ul class="notes">
+          <li><time datetime="2026-11-12">12 novembre</time>Instrument Serif reste lisible à 13 px sur mobile, à condition d'ouvrir l'interlettrage.</li>
+          <li><time datetime="2026-11-05">5 novembre</time>Les deux revues les plus utiles que j'ai reçues tenaient en une phrase chacune.</li>
+          <li><time datetime="2026-10-30">30 octobre</time>Trois jours sans framework : le CSS m'a pris 40 % du temps, pas 10 %.</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+</main>
+<footer class="foot">
+  <div class="foot-inner">
+    <div>
+      <p class="about">
+        <strong>Marginalia</strong>, le carnet de bord d'Emmanuel Ruchaud. J'y note ce que j'apprends
+        en développant des logiciels de gestion, et ce que l'écriture change dans le code que je livre.
+      </p>
+      <ul class="links">
+        <li><a href="#">Flux RSS</a></li>
+        <li><a href="#">Écrire un message</a></li>
+        <li><a href="#">Code des billets</a></li>
+      </ul>
+    </div>
+    <section class="signup" id="recevoir" aria-labelledby="recevoir-titre">
+      <h2 id="recevoir-titre">Recevoir les billets</h2>
+      <p class="help">Un courriel le mardi, tant qu'un billet sort. Désinscription en un clic.</p>
+      <form id="form" novalidate>
+        <label for="email" hidden>Votre adresse électronique</label>
+        <input id="email" type="email" placeholder="prenom@exemple.fr" autocomplete="email">
+        <button type="submit">Recevoir les billets</button>
+      </form>
+      <p class="say" id="say" role="status" aria-live="polite"></p>
+    </section>
+  </div>
+</footer>
+
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* progression de lecture */
+  const bar = document.getElementById('reading-bar');
+  let queued = false;
+  function paintProgress() {
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - window.innerHeight;
+    const p = max > 0 ? Math.min(1, window.scrollY / max) : 0;
+    bar.style.transform = 'scaleX(' + p.toFixed(4) + ')';
+    queued = false;
+  }
+  addEventListener('scroll', () => {
+    if (!queued) { queued = true; requestAnimationFrame(paintProgress); }
+  }, { passive: true });
+  paintProgress();
+
+  /* révélations au défilement, groupées et décalées */
+  const revealables = document.querySelectorAll('.reveal');
+  if (reduce || !('IntersectionObserver' in window)) {
+    revealables.forEach(el => el.classList.add('in'));
+  } else {
+    const seen = new Set();
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting || seen.has(entry.target)) return;
+        seen.add(entry.target);
+        const sibs = Array.from(entry.target.parentElement.children).filter(c => c.classList.contains('reveal'));
+        entry.target.style.setProperty('--d', (sibs.indexOf(entry.target) % 5) * 80 + 'ms');
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: .12 });
+    revealables.forEach(el => io.observe(el));
+  }
+
+  /* filtre par sujet + recherche */
+  const chips = Array.from(document.querySelectorAll('.chip'));
+  const input = document.getElementById('q');
+  const posts = Array.from(document.querySelectorAll('.post'));
+  const tally = document.getElementById('tally');
+  const empty = document.getElementById('empty');
+  const total = posts.length;
+  let filter = 'tous';
+
+  const flat = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+  function refresh() {
+    const q = flat(input.value.trim());
+    let visible = 0;
+    posts.forEach(li => {
+      const okTag = filter === 'tous' || li.dataset.tags.split(' ').includes(filter);
+      const okWord = !q || flat(li.textContent).includes(q);
+      if (okTag && okWord) {
+        visible++;
+        li.hidden = false;
+        if (reduce) { li.classList.remove('is-out'); }
+        else requestAnimationFrame(() => requestAnimationFrame(() => li.classList.remove('is-out')));
+      } else {
+        li.classList.add('is-out');
+        const hide = () => { if (li.classList.contains('is-out')) li.hidden = true; };
+        reduce ? hide() : setTimeout(hide, 300);
+      }
     });
-  </script>
+    tally.textContent = visible === total
+      ? total + ' billets'
+      : visible + (visible > 1 ? ' billets' : ' billet') + ' sur ' + total;
+    empty.hidden = visible !== 0;
+  }
+
+  chips.forEach(chip => chip.addEventListener('click', () => {
+    filter = chip.dataset.filter;
+    chips.forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+    refresh();
+  }));
+  input.addEventListener('input', refresh);
+
+  /* abonnement */
+  const signup = document.getElementById('recevoir');
+  const form = document.getElementById('form');
+  const email = document.getElementById('email');
+  const say = document.getElementById('say');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = email.value.trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+    if (!valid) {
+      say.className = 'say err';
+      say.textContent = value
+        ? 'Adresse incomplète : il manque le domaine après le @, par exemple exemple.fr.'
+        : 'Écrivez une adresse pour recevoir les billets.';
+      email.focus();
+      if (!reduce) {
+        signup.classList.add('is-shake');
+        setTimeout(() => signup.classList.remove('is-shake'), 460);
+      }
+      return;
+    }
+    say.className = 'say ok';
+    say.textContent = 'Inscription enregistrée : le premier courriel part mardi vers ' + value + '.';
+    form.querySelector('button').textContent = 'Inscription enregistrée';
+    form.querySelector('button').disabled = true;
+    email.disabled = true;
+  });
+</script>
+
+
+
 </body>
 </html>
